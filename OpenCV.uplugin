@@ -1,0 +1,26 @@
+{
+	"FileVersion": 1,
+	"Version": 1,
+	"VersionName": "1.0",
+    "EngineVersion" : "4.21.0",
+	"FriendlyName": "OpenCV",
+	"Description": "OpenCV plugin for Unreal Engine",
+	"Category": "OpenCV",
+	"CreatedBy": "",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault" : true,
+	"CanContainContent" : true,
+	"IsBetaVersion" : true,
+	"Installed" : false,
+	"RequiresBuildPlatform" : false,
+	"Modules": [
+		{
+			"Name": "OpenCV",
+			"Type": "Runtime",
+			"LoadingPhase" : "Default"
+		}
+	]
+}
