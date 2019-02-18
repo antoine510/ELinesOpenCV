@@ -26,7 +26,7 @@ void OPENCV_API LogMessageOnScreen(const char* msg);
 
 class OPENCV_API Workload {
 public:
-	Workload(UTextureRenderTarget2D* input, UTexture2D* output) : InTex(input), OutTex(output) {}
+	Workload(UTextureRenderTarget2D* input, UTexture2D* output) : InTex(input), OutTex(output), _pendingDeletion(false) {}
 	virtual ~Workload() = default;
 
 	virtual void PreSync() = 0;
@@ -37,8 +37,10 @@ public:
 
 	template<typename T>
 	static void SetParameter(std::atomic<T>& param, T value) {
-		param.store(value, std::memory_order_release);
+		param.store(value, std::memory_order_relaxed);
 	}
+
+	void SuicideOnFinished() { _pendingDeletion.store(true, std::memory_order_relaxed); }
 
 protected:
 	static UTexture2D* CreateTexture(int width, int height, EPixelFormat format);
@@ -49,6 +51,8 @@ protected:
 	UTextureRenderTarget2D* InTex;
 	//FTexture2DRHIRef Staging;
 	UTexture2D* OutTex;
+
+	std::atomic<bool> _pendingDeletion;
 };
 
 class OPENCV_API ElectricLinesWorkload : public Workload {
@@ -79,14 +83,15 @@ public:
 		promise->get_future().wait();
 		delete promise;
 		cv::Mat lines;
-		cv::Canny(_inpMat, _edgesMat, thresholdCanny1.load(std::memory_order_acquire), thresholdCanny2.load(std::memory_order_acquire));
-		cv::HoughLinesP(_edgesMat, lines, rho.load(std::memory_order_acquire), theta.load(std::memory_order_acquire),
-						thresholdHough.load(std::memory_order_acquire), minLineLength.load(std::memory_order_acquire),
-						maxLineGap.load(std::memory_order_acquire));
+		cv::Canny(_inpMat, _edgesMat, thresholdCanny1.load(std::memory_order_relaxed), thresholdCanny2.load(std::memory_order_relaxed));
+		cv::HoughLinesP(_edgesMat, lines, rho.load(std::memory_order_relaxed), theta.load(std::memory_order_relaxed),
+						thresholdHough.load(std::memory_order_relaxed), minLineLength.load(std::memory_order_relaxed),
+						maxLineGap.load(std::memory_order_relaxed));
 		memset(_outMat.data, 0, _outMat.dataend - _outMat.datastart);
 		for(int i = 0; i < lines.rows; ++i) {
 			cv::line(_outMat, cv::Point(lines.at<int>(i, 0), lines.at<int>(i, 1)), cv::Point(lines.at<int>(i, 2), lines.at<int>(i, 3)), cv::Scalar(255), 2);
 		}
+		if(_pendingDeletion.load(std::memory_order_relaxed)) delete this;
 	}
 
 	UTexture2D* PostSync() override {

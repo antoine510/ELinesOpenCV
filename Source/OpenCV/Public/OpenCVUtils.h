@@ -26,7 +26,7 @@ public:
 			checkf(_thread.joinable(), L"Async thread not joinable");
 			_thread.join();
 			_running = false;
-		} else {		// Unsalvagable: detach
+		} else {			// Unsalvagable: detach
 			_thread.detach();
 		}
 	}
