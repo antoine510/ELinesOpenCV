@@ -27,6 +27,8 @@ public class OpenCV : ModuleRules {
 
 		addDependency("Win64", "opencv_world401.dll");
 		addDependency("Win64", "opencv_ffmpeg401_64.dll");
+		
+		bEnableExceptions = true;
 	}
 	
 	private void addDependency(string arch, string lib) {

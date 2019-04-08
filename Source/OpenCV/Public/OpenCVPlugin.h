@@ -103,8 +103,8 @@ public:
 		return rho >= 1.f && theta >= 0.01f;
 	}
 
-	std::atomic<double> rho, theta, minLineLength, maxLineGap, thresholdCanny1, thresholdCanny2;
-	std::atomic<int> thresholdHough;
+	std::atomic<double> rho{1}, theta{0.017}, minLineLength{100}, maxLineGap{10}, thresholdCanny1{100}, thresholdCanny2{200};
+	std::atomic<int> thresholdHough{5};
 
 protected:
 	cv::Mat _inpMat, _outMat, _edgesMat;

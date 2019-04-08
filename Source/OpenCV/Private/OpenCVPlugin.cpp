@@ -37,16 +37,13 @@ UTexture2D* OpenCV::Workload::CreateTexture(int width, int height, EPixelFormat 
 }
 
 void OpenCV::Workload::UpdateTexture(UTexture2D* dst, cv::Mat src) {
-	ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
-		UpdateDynamicTextureCode,
-		UTexture2D*, pDst, dst,
-		cv::Mat, srcMat, src,
-		{
-			FUpdateTextureRegion2D region(0, 0, 0, 0, srcMat.rows, srcMat.cols);
+	ENQUEUE_RENDER_COMMAND(UpdateDynamicTextureCode)([dst, src](FRHICommandListImmediate& RHICmdList) {
+		FUpdateTextureRegion2D region(0, 0, 0, 0, src.rows, src.cols);
 
-			auto resource = (FTexture2DResource*)pDst->Resource;
-			RHIUpdateTexture2D(resource->GetTexture2DRHI(), 0, region, srcMat.rows, srcMat.data);
-		});
+		auto resource = (FTexture2DResource*)dst->Resource;
+		RHICmdList.UpdateTexture2D(resource->GetTexture2DRHI(), 0, region, src.rows, src.data);
+													 }
+	);
 }
 
 void OpenCV::Workload::StageTexture() {
@@ -69,25 +66,22 @@ void OpenCV::Workload::StageTexture() {
 }
 
 void OpenCV::Workload::ReadPixels(UTextureRenderTarget2D* src, cv::Mat dst, std::promise<void>* promise) {
-	ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
-		ReadTextureCode,
-		UTextureRenderTarget2D*, pRTtex, src,
-		cv::Mat, dstMat, dst,
-		std::promise<void>*, barrier, promise,
-		{
-			FTexture2DRHIRef texture = ((FTextureRenderTarget2DResource*)pRTtex->GetRenderTargetResource())->GetTextureRHI();
-			uint32 Stride = 0;
-			uchar* TexData = (uchar*)RHILockTexture2D(texture, 0, RLM_ReadOnly, Stride, false, false);
-			if(Stride != dstMat.rows) {
-				for(int i = 0; i < dstMat.cols; ++i) {
-					memcpy(dstMat.data + i * dstMat.rows, TexData + i * Stride, dstMat.rows);
-				}
-			} else {
-				memcpy(dstMat.data, TexData, Stride * dstMat.cols);
+	ENQUEUE_RENDER_COMMAND(ReadTextureCode)([src, dst, promise](FRHICommandListImmediate& RHICmdList) {
+		FTexture2DRHIRef texture = ((FTextureRenderTarget2DResource*)src->GetRenderTargetResource())->GetTextureRHI();
+		uint32 Stride = 0;
+		uchar* TexData = (uchar*)RHICmdList.LockTexture2D(texture, 0, RLM_ReadOnly, Stride, false, false);
+		if(Stride != dst.rows) {
+			for(int i = 0; i < dst.cols; ++i) {
+				memcpy(dst.data + i * dst.rows, TexData + i * Stride, dst.rows);
 			}
-			RHIUnlockTexture2D(texture, 0, false, false);
-			barrier->set_value();
-		});
+		} else {
+			memcpy(dst.data, TexData, Stride * dst.cols);
+		}
+		RHICmdList.UnlockTexture2D(texture, 0, false, false);
+		promise->set_value();
+											}
+	);
+
 	/*ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
 		ReadTextureCode,
 		UTextureRenderTarget2D*, pRTtex, src,

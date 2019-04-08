@@ -2,7 +2,6 @@
 	"FileVersion": 1,
 	"Version": 1,
 	"VersionName": "1.0",
-    "EngineVersion" : "4.21.0",
 	"FriendlyName": "OpenCV",
 	"Description": "OpenCV plugin for Unreal Engine",
 	"Category": "OpenCV",
