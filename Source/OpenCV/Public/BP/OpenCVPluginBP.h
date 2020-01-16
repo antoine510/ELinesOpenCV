@@ -138,19 +138,4 @@ private:
 	std::shared_ptr<Workload> _workload;
 };
 
-/*UCLASS(BlueprintType)
-class OPENCV_API UOpenCVUtility : public UBlueprintFunctionLibrary {
-	GENERATED_UCLASS_BODY()
-
-public:
-
-	UFUNCTION(BlueprintPure, Category = "OpenCV", meta = (WorldContext = WorldContextObject))
-		static void GetOpenCVManager(UObject* WorldContextObject, UOpenCVManagerBP*& manager) {
-		if(GEngine == nullptr || GEngine->GetWorldFromContextObject(WorldContextObject) == nullptr) return;
-		auto* world = GEngine->GetWorldFromContextObject(WorldContextObject);
-		if(world->GetAuthGameMode() == nullptr) return;
-		manager = world->GetAuthGameMode()->FindComponentByClass<UOpenCVManagerBP>();
-	}
-
-};*/
 

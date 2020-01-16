@@ -46,25 +46,6 @@ void OpenCV::Workload::UpdateTexture(UTexture2D* dst, cv::Mat src) {
 	);
 }
 
-void OpenCV::Workload::StageTexture() {
-	/*ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
-		StageTextureCode,
-		UTextureRenderTarget2D*, pSrcTex, InTex,
-		FTexture2DRHIRef, pDstTex, Staging,
-		{
-			FTextureRHIParamRef texture = pSrcTex->GetRenderTargetResource()->GetRenderTargetTexture();
-
-			RHICopySubTextureRegion_RenderThread();
-			D3DRHI->GetDeviceContext()->CopySubresourceRegion(StagingTexture, 0, 0, 0, 0, GetResource(), Subresource, NULL);
-			int32 w = 0;
-			int32 h = 0;
-			RHICmdList.MapStagingSurface(texture, mappedData, w, h);
-			FMemory::Memcpy(dstMat.data, (uchar*)mappedData, w * h);
-			barrier->set_value();
-			RHICmdList.UnmapStagingSurface(texture);
-		});*/
-}
-
 void OpenCV::Workload::ReadPixels(UTextureRenderTarget2D* src, cv::Mat dst, std::promise<void>* promise) {
 	ENQUEUE_RENDER_COMMAND(ReadTextureCode)([src, dst, promise](FRHICommandListImmediate& RHICmdList) {
 		FTexture2DRHIRef texture = ((FTextureRenderTarget2DResource*)src->GetRenderTargetResource())->GetTextureRHI();
@@ -79,22 +60,21 @@ void OpenCV::Workload::ReadPixels(UTextureRenderTarget2D* src, cv::Mat dst, std:
 		}
 		RHICmdList.UnlockTexture2D(texture, 0, false, false);
 		promise->set_value();
-											}
-	);
+	});
+}
 
-	/*ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
-		ReadTextureCode,
-		UTextureRenderTarget2D*, pRTtex, src,
-		cv::Mat, dstMat, dst,
-		std::promise<void>*, barrier, promise,
-		{
-			FTextureRHIParamRef texture = pRTtex->GetRenderTargetResource()->GetRenderTargetTexture();
-			void* mappedData;
-			int32 w = 0;
-			int32 h = 0;
-			RHICmdList.MapStagingSurface(texture, mappedData, w, h);
-			FMemory::Memcpy(dstMat.data, (uchar*)mappedData, w * h);
-			barrier->set_value();
-			RHICmdList.UnmapStagingSurface(texture);
-		});*/
+
+void OpenCV::ElectricLinesWorkload::Async() {
+	promise->get_future().wait();
+	delete promise;
+	cv::Mat lines;
+	cv::Canny(_inpMat, _edgesMat, thresholdCanny1.load(std::memory_order_relaxed), thresholdCanny2.load(std::memory_order_relaxed));
+	cv::HoughLinesP(_edgesMat, lines, rho.load(std::memory_order_relaxed), theta.load(std::memory_order_relaxed),
+					thresholdHough.load(std::memory_order_relaxed), minLineLength.load(std::memory_order_relaxed),
+					maxLineGap.load(std::memory_order_relaxed));
+	memset(_outMat.data, 0, _outMat.dataend - _outMat.datastart);
+	for(int i = 0; i < lines.rows; ++i) {
+		cv::line(_outMat, cv::Point(lines.at<int>(i, 0), lines.at<int>(i, 1)), cv::Point(lines.at<int>(i, 2), lines.at<int>(i, 3)), cv::Scalar(255), 2);
+	}
+	if(_pendingDeletion.load(std::memory_order_relaxed)) delete this;
 }

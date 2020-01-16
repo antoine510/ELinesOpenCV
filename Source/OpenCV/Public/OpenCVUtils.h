@@ -1,5 +1,6 @@
 #include <thread>
 #include <atomic>
+#include <array>
 #include <Engine.h>
 
 extern void OpenCV::LogMessage(const char* msg);
@@ -11,7 +12,7 @@ bool IsValidT(const T* Test) {
 
 namespace OpenCV {
 
-class AsyncEngine {
+class AsyncTask {
 public:
 	void SetTask(std::function<void()>&& asyncF, std::function<void()>&& syncF) {
 		if(!ensure(IsAvailable())) return;
@@ -49,6 +50,25 @@ private:
 	bool _running = false;
 
 	std::function<void()> _syncF;
+};
+
+class AsyncEngine {
+public:
+	void AddTask(std::function<void()>&& asyncF, std::function<void()>&& syncF) {
+
+	}
+
+	void Tick() {
+		for(const auto& task : _tasks) {
+			task.Tick();
+		}
+	}
+
+	bool IsTickable() const { return _running; }
+	bool IsAvailable() const { return !_running; }
+
+private:
+	std::array<AsyncTask, 4> _tasks;
 };
 
 inline char* allocCString(const FString& str) {
