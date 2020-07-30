@@ -1,7 +1,9 @@
-#include "OpenCVPCH.h"
 #include "OpenCV.h"
-#include "Core.h"
-#include "ModuleManager.h"
+#include <Misc/Paths.h>
+#include <Internationalization/Text.h>
+#include <Modules/ModuleManager.h>
+#include <HAL/PlatformProcess.h>
+#include <Misc/MessageDialog.h>
 
 bool OpenCVModule::initialized = false;
 void* OpenCVModule::dllHandle = nullptr;

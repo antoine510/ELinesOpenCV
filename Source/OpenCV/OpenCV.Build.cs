@@ -11,8 +11,7 @@ public class OpenCV : ModuleRules {
 	public OpenCV(ReadOnlyTargetRules Target) : base(Target) {
 		PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 		PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "RHI", "RenderCore"});
-		PrivatePCHHeaderFile = "Private/OpenCVPCH.h";
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "RHI", "RenderCore", "ParamPanel"});
 
 		if (Target.Platform != UnrealTargetPlatform.Win64) {
 			throw new System.Exception("This plugin is only available for Win64 right now.");
@@ -20,8 +19,7 @@ public class OpenCV : ModuleRules {
 
 		PrivateIncludePaths.Add(Path.Combine(opencvPath, "include/"));
 		
-		PublicLibraryPaths.Add(Path.Combine(opencvPath, "lib/Win64/"));
-		PublicAdditionalLibraries.Add("opencv_world401.lib");
+		addLibrary("Win64", "opencv_world401.lib");
 
 		PublicDelayLoadDLLs.Add("opencv_world401.dll");
 
@@ -29,6 +27,10 @@ public class OpenCV : ModuleRules {
 		addDependency("Win64", "opencv_ffmpeg401_64.dll");
 		
 		bEnableExceptions = true;
+	}
+	
+	private void addLibrary(string arch, string lib) {
+		PublicAdditionalLibraries.Add(Path.Combine(opencvPath, "lib/", arch, lib));
 	}
 	
 	private void addDependency(string arch, string lib) {

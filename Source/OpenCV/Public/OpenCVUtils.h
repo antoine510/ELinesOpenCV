@@ -1,9 +1,9 @@
+#pragma once
+
+#include <functional>
 #include <thread>
 #include <atomic>
 #include <array>
-#include <Engine.h>
-
-extern void OpenCV::LogMessage(const char* msg);
 
 template <typename T>
 bool IsValidT(const T* Test) {
@@ -59,7 +59,7 @@ public:
 	}
 
 	void Tick() {
-		for(const auto& task : _tasks) {
+		for(auto& task : _tasks) {
 			task.Tick();
 		}
 	}
@@ -69,39 +69,9 @@ public:
 
 private:
 	std::array<AsyncTask, 4> _tasks;
+
+	bool _running = false;
 };
-
-inline char* allocCString(const FString& str) {
-	const auto cast = StringCast<char>(*str);
-	char* res = (char*)FMemory::SystemMalloc(cast.Length() + 1);
-	FMemory::Memcpy(res, cast.Get(), cast.Length());
-	res[cast.Length()] = 0;
-	return res;
-}
-
-inline void freeCString(const char* cstr) {
-	FMemory::SystemFree(const_cast<char*>(cstr));
-}
-
-template <typename T1, typename... Ts>
-inline bool _valid(T1* obj, Ts*... pack) {
-	return IsValid(obj) && _valid(pack...);
-}
-
-template <typename Last>
-inline bool _valid(Last* obj) {
-	return IsValid(obj);
-}
-
-template <typename... ObjectsT>
-inline bool checkValid(ObjectsT*... objects) {
-	if(_valid(objects...)) {
-		return true;
-	} else {
-		OpenCVLog("Trying to use uninitialized object");
-		return false;
-	}
-}
 
 }
 

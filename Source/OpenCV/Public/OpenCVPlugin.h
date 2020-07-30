@@ -1,5 +1,8 @@
 #pragma once
 
+#include <CoreTypes.h>
+#include <Engine/Texture2D.h>
+
 #include <future>
 
 #pragma push_macro("check")
@@ -11,7 +14,6 @@
 #pragma pop_macro("check")
 
 #include "OpenCV.h"
-#include "Kismet/BlueprintFunctionLibrary.h"
 
 extern OPENCV_API struct FLogCategoryOpenCVLog : public FLogCategory<ELogVerbosity::Log, ELogVerbosity::All> {
 	FLogCategoryOpenCVLog() : FLogCategory(TEXT("OpenCV Log")) {}
@@ -21,8 +23,6 @@ namespace OpenCV {
 
 void OPENCV_API LogMessage(const FString& msg);
 void OPENCV_API LogMessageOnScreen(const FString& msg);
-void OPENCV_API LogMessage(const char* msg);
-void OPENCV_API LogMessageOnScreen(const char* msg);
 
 class OPENCV_API Workload {
 public:

@@ -1,13 +1,9 @@
 #pragma once
 
-#include "Kismet/BlueprintFunctionLibrary.h"
-#include "Tickable.h"
+#include <Tickable.h>
 
 #include "OpenCVPlugin.h"
 #include "OpenCVUtils.h"
-
-#include <Engine/Classes/Components/ActorComponent.h>
-#include <Engine/Classes/Components/SceneCaptureComponent2D.h>
 
 #include "OpenCVPluginBP.generated.h"
 
@@ -38,15 +34,15 @@ public:
 
 	TStatId GetStatId() const override { return GetStatID(); }
 	bool IsTickable() const override {
-		return asyncEngine.IsTickable();
+		return asyncTask.IsTickable();
 	}
 
 	void Tick(float) override {
-		asyncEngine.Tick();
+		asyncTask.Tick();
 	}
 
 	void BeginDestroy() override {
-		asyncEngine.StopTask();
+		asyncTask.StopTask();
 		Super::BeginDestroy();
 	}
 
@@ -56,59 +52,13 @@ public:
 							   FIntPoint imageSize,
 							   UTextureRenderTarget2D* input,
 							   UTexture2D*& output,
-							   UOpenCVTask*& task) {
-		task = NewObject<UOpenCVTask>();
-		switch(workload) {
-		case EOpenCVTasks::ElectricLines:
-			task->_workload = std::make_shared<ElectricLinesWorkload>(imageSize, input, output);
-			break;
-		default:
-			checkNoEntry();
-		}
-	}
+							   UOpenCVTask*& task);
 
 	UFUNCTION(BlueprintCallable)
-		void StartTask(const FProcessDelegate& completed) {
-		if(!ensure(_IsReady())) return;
-		_delegate = completed;
-		_workload->PreSync();
-		asyncEngine.SetTask(std::bind(&Workload::Async, _workload),
-							[this]() { _delegate.ExecuteIfBound(_workload->PostSync()); });
-	}
+		void StartTask(const FProcessDelegate& completed);
 
 	UFUNCTION(BlueprintCallable)
-		void SetTaskParameter(EElectricLinesParams param, float value) {
-		if(!ensure(IsValid())) return;
-		auto& wl = static_cast<ElectricLinesWorkload&>(*_workload);
-		switch(param) {
-		case EElectricLinesParams::rho:
-			Workload::SetParameter(wl.rho, (double)value);
-			break;
-		case EElectricLinesParams::theta:
-			Workload::SetParameter(wl.theta, (double)value);
-			break;
-		case EElectricLinesParams::minLineLength:
-			Workload::SetParameter(wl.minLineLength, (double)value);
-			break;
-		case EElectricLinesParams::maxLineGap:
-			Workload::SetParameter(wl.maxLineGap, (double)value);
-			break;
-		case EElectricLinesParams::thresholdCanny1:
-			Workload::SetParameter(wl.thresholdCanny1, (double)value);
-			break;
-		case EElectricLinesParams::thresholdCanny2:
-			Workload::SetParameter(wl.thresholdCanny2, (double)value);
-			break;
-		case EElectricLinesParams::thresholdHough:
-			Workload::SetParameter(wl.thresholdHough, (int)value);
-			break;
-		default:
-			checkNoEntry();
-		}
-		if(!_workload->CheckParameters()) {
-			LogMessageOnScreen("Invalid task parameters");
-		}
-	}
+		void SetTaskParameter(EElectricLinesParams param, float value);
 
 	bool IsValid() const { return _workload != nullptr; }
 
@@ -123,13 +73,13 @@ public:
 
 
 	/** ASYNC calls facilities **/
-	AsyncEngine asyncEngine;
+	OpenCV::AsyncTask asyncTask;
 
 private:
 	bool _IsReady() const {
 		if(!IsValid()) LogMessageOnScreen(L"Using invalid StreamSource");
 		else if(!_workload->CheckParameters()) LogMessageOnScreen(L"OpenCV task has invalid parameters");
-		else if(!asyncEngine.IsAvailable()) LogMessageOnScreen(L"Async operation in progress on this StreamSource");
+		else if(!asyncTask.IsAvailable()) LogMessageOnScreen(L"Async operation in progress on this StreamSource");
 		else return true;
 		return false;
 	}

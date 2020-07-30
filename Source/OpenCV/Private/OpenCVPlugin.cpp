@@ -1,6 +1,6 @@
-#include "OpenCVPCH.h"
 #include "OpenCVPlugin.h"
-#include <Engine.h>
+#include <Engine/Engine.h>
+#include <Engine/TextureRenderTarget2D.h>
 
 FLogCategoryOpenCVLog OpenCVLog;
 
@@ -11,15 +11,6 @@ void OpenCV::LogMessage(const FString& msg) {
 void OpenCV::LogMessageOnScreen(const FString& msg) {
 	LogMessage(msg);
 	if(GEngine != nullptr) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, msg);
-}
-
-void OpenCV::LogMessage(const char* msg) {
-	UE_LOG(OpenCVLog, Log, TEXT("%s"), UTF8_TO_TCHAR(msg));
-}
-
-void OpenCV::LogMessageOnScreen(const char* msg) {
-	LogMessage(msg);
-	if(GEngine != nullptr) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, UTF8_TO_TCHAR(msg));
 }
 
 
@@ -63,8 +54,16 @@ void OpenCV::Workload::ReadPixels(UTextureRenderTarget2D* src, cv::Mat dst, std:
 	});
 }
 
+#include <chrono>
 
 void OpenCV::ElectricLinesWorkload::Async() {
+	using namespace std::chrono;
+
+	static unsigned perf_loops = 0;
+	static microseconds perf_timesum, perf_processSum;
+
+	auto start_time = system_clock::now();
+
 	promise->get_future().wait();
 	delete promise;
 	cv::Mat lines;
@@ -72,9 +71,24 @@ void OpenCV::ElectricLinesWorkload::Async() {
 	cv::HoughLinesP(_edgesMat, lines, rho.load(std::memory_order_relaxed), theta.load(std::memory_order_relaxed),
 					thresholdHough.load(std::memory_order_relaxed), minLineLength.load(std::memory_order_relaxed),
 					maxLineGap.load(std::memory_order_relaxed));
+
+	perf_processSum += duration_cast<decltype(perf_timesum)>(system_clock::now() - start_time);
+
 	memset(_outMat.data, 0, _outMat.dataend - _outMat.datastart);
 	for(int i = 0; i < lines.rows; ++i) {
 		cv::line(_outMat, cv::Point(lines.at<int>(i, 0), lines.at<int>(i, 1)), cv::Point(lines.at<int>(i, 2), lines.at<int>(i, 3)), cv::Scalar(255), 2);
 	}
+
+	perf_timesum += duration_cast<decltype(perf_timesum)>(system_clock::now() - start_time);
+	perf_loops++;
+
+	if(perf_loops % 100 == 0) {
+		LogMessage(L"Average OpenCV time (processing/total): " +
+					FString::FromInt(perf_processSum.count() / perf_loops) +
+					L"/" +
+					FString::FromInt(perf_timesum.count() / perf_loops) +
+					L" us");
+	}
+
 	if(_pendingDeletion.load(std::memory_order_relaxed)) delete this;
 }
